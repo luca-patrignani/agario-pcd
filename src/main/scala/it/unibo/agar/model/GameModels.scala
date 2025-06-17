@@ -20,24 +20,18 @@ case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity
 
 case class Food(id: String, x: Double, y: Double, mass: Double = 100.0) extends Entity
 
-case class World(
-    width: Int,
-    height: Int,
-    players: Seq[Player],
-    foods: Seq[Food]
-):
+case class LocalWorld(
+                  width: Int,
+                  height: Int,
+                  players: Seq[Player],
+                  foods: Seq[Food]
+                ) extends World:
 
-  def playersExcludingSelf(player: Player): Seq[Player] =
-    players.filterNot(_.id == player.id)
-
-  def playerById(id: String): Option[Player] =
-    players.find(_.id == id)
-
-  def updatePlayer(player: Player): World =
+  def updatePlayer(player: Player): LocalWorld =
     copy(players = players.map(p => if (p.id == player.id) player else p))
 
-  def removePlayers(ids: Seq[Player]): World =
+  def removePlayers(ids: Seq[Player]): LocalWorld =
     copy(players = players.filterNot(p => ids.map(_.id).contains(p.id)))
 
-  def removeFoods(ids: Seq[Food]): World =
+  def removeFoods(ids: Seq[Food]): LocalWorld =
     copy(foods = foods.filterNot(f => ids.contains(f)))

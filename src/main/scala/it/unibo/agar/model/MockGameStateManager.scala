@@ -6,8 +6,8 @@ trait GameStateManager:
   def movePlayerDirection(id: String, dx: Double, dy: Double): Unit
 
 class MockGameStateManager(
-    var world: World,
-    val speed: Double = 10.0
+                            var world: World,
+                            val speed: Double = 10.0
 ) extends GameStateManager:
 
   private var directions: Map[String, (Double, Double)] = Map.empty
