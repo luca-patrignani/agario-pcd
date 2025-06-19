@@ -17,14 +17,16 @@ class MockGameStateManager(
   def movePlayerDirection(id: String, dx: Double, dy: Double): Unit =
     directions = directions.updated(id, (dx, dy))
 
-  def tick(): Unit =
+  def tick(world: World): Unit = {
+    this.world = world
     directions.foreach:
       case (id, (dx, dy)) =>
-        world.playerById(id) match
+        this.world.playerById(id) match
           case Some(player) =>
-            world = updateWorldAfterMovement(updatePlayerPosition(player, dx, dy))
+            this.world = updateWorldAfterMovement(updatePlayerPosition(player, dx, dy))
           case None =>
-          // Player not found, ignore movement
+  }
+  // Player not found, ignore movement
 
   private def updatePlayerPosition(player: Player, dx: Double, dy: Double): Player =
     val newX = (player.x + dx * speed).max(0).min(world.width)
