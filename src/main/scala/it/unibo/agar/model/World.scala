@@ -12,8 +12,3 @@ trait World:
   def playerById(id: String): Option[Player] =
     players.find(_.id == id)
 
-  def updatePlayer(player: Player): World
-
-  def removePlayers(ids: Seq[Player]): World
-
-  def removeFoods(ids: Seq[Food]): World

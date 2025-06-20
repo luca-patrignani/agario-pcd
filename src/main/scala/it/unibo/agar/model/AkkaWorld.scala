@@ -1,44 +1,24 @@
 package it.unibo.agar.model
 
-import akka.cluster.ddata.{ORSet, ReplicatedData, SelfUniqueAddress}
+import java.util.UUID
+import scala.util.Random.nextInt
 
-case class AkkaWorld(width: Int, height: Int, _players: ORSet[Player], _foods: ORSet[Food], node: SelfUniqueAddress)
-  extends World with ReplicatedData:
+case class AkkaWorld(width: Int, height: Int, _players: Map[String, Player] = Map.empty, _foods: Map[String, Food] = Map.empty,
+                     removedEntitiesIds: Seq[String] = Seq.empty) extends World:
 
-  given SelfUniqueAddress = node
+  def updatePlayer(player: Player): AkkaWorld =
+    copy(_players = _players.updated(player.id, player))
 
-  def players: Seq[Player] = _players.elements.toSeq
+  def removePlayers(ids: Seq[String]): AkkaWorld =
+    copy(_players = _players.removedAll(ids), removedEntitiesIds = removedEntitiesIds ++ ids)
 
-  def foods: Seq[Food] = _foods.elements.toSeq
+  def addFoods(quantity: Int): AkkaWorld =
+    val newFoods = (1 to quantity).map(i => Food(s"f${nextInt()}", nextInt(width), nextInt(height)))
+    copy(_foods = _foods ++ newFoods.map(food => food.id -> food))
 
-  override def updatePlayer(player: Player): World =
-    playerById(player.id) match
-      case Some(removingPlayer) =>
-        copy(
-          _players = _players.remove(removingPlayer) :+ player
-        )
-      case _ => this
+  def removeFoods(ids: Seq[String]): AkkaWorld =
+    copy(_foods = _foods.removedAll(ids), removedEntitiesIds = removedEntitiesIds ++ ids)
 
-  override def removePlayers(ids: Seq[Player]): World =
-    copy(
-      _players = ids
-        .map(_.id)
-        .flatMap(playerById)
-        .foldLeft(_players)((set, player) => set.remove(player))
-    )
+  override def players: Seq[Player] = _players.filterNot((id, player) => removedEntitiesIds.contains(id)).values.toSeq
 
-  override def removeFoods(ids: Seq[Food]): World =
-    copy(
-      _foods = ids.foldLeft(_foods)((set, food) => set.remove(food))
-    )
-
-  override type T = AkkaWorld
-
-  override def merge(that: AkkaWorld): AkkaWorld =
-    AkkaWorld(
-      width,
-      height,
-      _players.merge(that._players),
-      _foods.merge(that._foods),
-      node
-    )
+  override def foods: Seq[Food] = _foods.filterNot((id, food) => removedEntitiesIds.contains(id)).values.toSeq

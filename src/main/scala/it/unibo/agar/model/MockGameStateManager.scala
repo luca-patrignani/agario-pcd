@@ -6,18 +6,18 @@ trait GameStateManager:
   def movePlayerDirection(id: String, dx: Double, dy: Double): Unit
 
 class MockGameStateManager(
-                            var world: World,
+                            var world: AkkaWorld,
                             val speed: Double = 10.0
 ) extends GameStateManager:
 
   private var directions: Map[String, (Double, Double)] = Map.empty
-  def getWorld: World = world
+  def getWorld: AkkaWorld = world
 
   // Move a player in a given direction (dx, dy)
   def movePlayerDirection(id: String, dx: Double, dy: Double): Unit =
     directions = directions.updated(id, (dx, dy))
 
-  def tick(world: World): Unit = {
+  def tick(world: AkkaWorld): Unit = {
     this.world = world
     directions.foreach:
       case (id, (dx, dy)) =>
@@ -33,7 +33,7 @@ class MockGameStateManager(
     val newY = (player.y + dy * speed).max(0).min(world.height)
     player.copy(x = newX, y = newY)
 
-  private def updateWorldAfterMovement(player: Player): World =
+  private def updateWorldAfterMovement(player: Player): AkkaWorld =
     val foodEaten = world.foods.filter(food => EatingManager.canEatFood(player, food))
     val playerEatsFood = foodEaten.foldLeft(player)((p, food) => p.grow(food))
     val playersEaten = world
@@ -42,5 +42,5 @@ class MockGameStateManager(
     val playerEatPlayers = playersEaten.foldLeft(playerEatsFood)((p, other) => p.grow(other))
     world
       .updatePlayer(playerEatPlayers)
-      .removePlayers(playersEaten)
-      .removeFoods(foodEaten)
+      .removePlayers(playersEaten.map(_.id))
+      .removeFoods(foodEaten.map(_.id))
