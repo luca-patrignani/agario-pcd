@@ -1,0 +1,114 @@
+package it.unibo.agar.model
+
+import akka.actor.typed.ActorRef
+import akka.cluster.ddata.typed.scaladsl.Replicator
+import akka.cluster.ddata.{LWWMap, LWWMapKey, SelfUniqueAddress}
+import akka.cluster.ddata.typed.scaladsl.ReplicatorMessageAdapter
+import it.unibo.agar.controller.FoodManager
+import it.unibo.agar.controller.FoodManager.Command
+
+trait GameStateManager:
+  def getWorld: World
+  def movePlayerDirection(id: String, dx: Double, dy: Double): Unit
+  def setWorld(w: AkkaWorld): Unit
+  def tick(world: AkkaWorld): Unit
+  
+class MockGameStateManager(var world: AkkaWorld, val speed: Double = 10.0) extends GameStateManager:
+  
+    private var directions: Map[String, (Double, Double)] = Map.empty
+
+    def getWorld: AkkaWorld = world
+    def setWorld(w: AkkaWorld): Unit = this.world = w
+
+    // Move a player in a given direction (dx, dy)
+    def movePlayerDirection(id: String, dx: Double, dy: Double): Unit =
+      directions = directions.updated(id, (dx, dy))
+
+    def tick(world: AkkaWorld): Unit = {
+      this.world = world
+      directions.foreach:
+        case (id, (dx, dy)) =>
+          this.world.playerById(id) match
+            case Some(player) =>
+              this.world = updateWorldAfterMovement(updatePlayerPosition(player, dx, dy))
+            case None =>
+    }
+    // Player not found, ignore movement
+
+    private def updatePlayerPosition(player: Player, dx: Double, dy: Double): Player =
+      val newX = (player.x + dx * speed).max(0).min(world.width)
+      val newY = (player.y + dy * speed).max(0).min(world.height)
+      player.copy(x = newX, y = newY)
+
+    private def updateWorldAfterMovement(player: Player): AkkaWorld =
+      val foodEaten = world.foods.filter(food => EatingManager.canEatFood(player, food))
+      val playerEatsFood = foodEaten.foldLeft(player)((p, food) => p.grow(food))
+      val playersEaten = world
+        .playersExcludingSelf(player)
+        .filter(player => EatingManager.canEatPlayer(playerEatsFood, player))
+      val playerEatPlayers = playersEaten.foldLeft(playerEatsFood)((p, other) => p.grow(other))
+      world
+        .updatePlayer(playerEatPlayers)
+        .removePlayers(playersEaten.map(_.id))
+        .removeFoods(foodEaten.map(_.id))
+
+/*class DistributedGameStateManager(
+                                   private var world: AkkaWorld,
+                                   foodManager: ActorRef[FoodManager.Command],
+                                   replicator: ReplicatorMessageAdapter[?, Command],
+                                   implicit val node: SelfUniqueAddress,
+                                   val speed: Double = 10.0
+                                 ) extends GameStateManager:
+
+  sealed trait Command
+  private val EntitiesKey = LWWMapKey[String, Entity]("entities")
+
+  private var directions: Map[String, (Double, Double)] = Map.empty
+  def getWorld: AkkaWorld = world
+  def setWorld(w: World): Unit = this.world = w.asInstanceOf[AkkaWorld]
+
+  def movePlayerDirection(id: String, dx: Double, dy: Double): Unit =
+    directions = directions.updated(id, (dx, dy))
+
+  def tick(world: AkkaWorld): Unit =
+    this.world = world
+    directions.foreach {
+      case (id, (dx, dy)) =>
+        this.world.playerById(id) match
+          case Some(player) =>
+            this.world = updateWorldAfterMovement(updatePlayerPosition(player, dx, dy))
+          case None => ()
+    }
+
+  private def updatePlayerPosition(player: Player, dx: Double, dy: Double): Player =
+    val newX = (player.x + dx * speed).max(0).min(world.width)
+    val newY = (player.y + dy * speed).max(0).min(world.height)
+    player.copy(x = newX, y = newY)
+
+  private def updateWorldAfterMovement(player: Player): AkkaWorld =
+    val foodEaten = world.foods.filter(food => EatingManager.canEatFood(player, food))
+    val playerEatsFood = foodEaten.foldLeft(player)((p, food) => p.grow(food))
+    foodEaten.foreach(f => foodManager ! FoodManager.EatFood(player.id, f.id))
+
+    val playersEaten = world
+      .playersExcludingSelf(player)
+      .filter(other => EatingManager.canEatPlayer(playerEatsFood, other))
+    val playerEatPlayers = playersEaten.foldLeft(playerEatsFood)((p, other) => p.grow(other))
+    playersEaten.foreach(other => markPlayerAsDead(other.id))
+
+    world
+      .updatePlayer(playerEatPlayers)
+      .removePlayers(playersEaten.map(_.id))
+      .removeFoods(foodEaten.map(_.id))
+
+  private def markPlayerAsDead(playerId: String): Unit =
+    val now = System.currentTimeMillis()
+    replicator.askUpdate(
+      replyTo =>
+        Replicator.Update(EntitiesKey, LWWMap.empty[String, Entity], Replicator.WriteLocal, replyTo) { map =>
+          map.get(playerId) match
+            case Some(p: Player) => map.put(node, playerId, p.copy(alive = false, lastSeen = now))
+            case _               => map
+        },
+      _ => ()
+    )*/

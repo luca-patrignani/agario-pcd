@@ -1,5 +1,7 @@
 package it.unibo.agar.model
 
+import scala.util.Random.nextInt
+
 sealed trait Entity:
 
   def id: String
@@ -7,19 +9,28 @@ sealed trait Entity:
   def x: Double
   def y: Double
   def radius: Double = math.sqrt(mass / math.Pi)
+  def alive: Boolean
+  def lastSeen: Long
 
   def distanceTo(other: Entity): Double =
     val dx = x - other.x
     val dy = y - other.y
     math.hypot(dx, dy)
 
-case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity:
+  def distanceTo(otherx: Double, othery: Double): Double =
+    val dx = x - otherx
+    val dy = y - othery
+    math.hypot(dx, dy)
+
+case class Player(id: String, x: Double, y: Double, mass: Double, alive: Boolean= true, lastSeen: Long = System.currentTimeMillis()) extends Entity:
 
   def grow(entity: Entity): Player =
     copy(mass = mass + entity.mass)
 
-case class Food(id: String, x: Double, y: Double, mass: Double = 100.0) extends Entity
-
+case class Food(id: String, x: Double, y: Double, mass: Double = 100.0, alive: Boolean= true, lastSeen: Long = System.currentTimeMillis()) extends Entity
+object Food:
+  def random(w: Int, h: Int): Food =
+    Food(s"f${nextInt()}", nextInt(w), nextInt(h))
 case class LocalWorld(
                   width: Int,
                   height: Int,
