@@ -1,5 +1,7 @@
 package it.unibo.agar.model
 
+import scala.util.Random
+
 sealed trait Entity:
 
   def id: String
@@ -19,6 +21,9 @@ case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity
     copy(mass = mass + entity.mass)
 
 case class Food(id: String, x: Double, y: Double, mass: Double = 100.0) extends Entity
+object Food:
+  def random(w: Int , h: Int): Food =
+    Food(s"f${Random.nextInt()}", Random.nextInt(w), Random.nextInt(h))
 
 case class LocalWorld(
                   width: Int,

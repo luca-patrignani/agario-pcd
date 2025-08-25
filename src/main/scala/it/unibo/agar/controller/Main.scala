@@ -6,9 +6,10 @@ import akka.cluster.ddata
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Update, WriteLocal}
 import akka.cluster.ddata.typed.scaladsl.{DistributedData, Replicator}
 import akka.cluster.ddata.*
+import akka.cluster.typed.{ClusterSingleton, SingletonActor}
 import com.typesafe.config.ConfigFactory
 import it.unibo.agar.model.*
-import it.unibo.agar.view.LocalView
+import it.unibo.agar.view.{GlobalView, LocalView}
 
 import java.awt.Window
 import scala.concurrent.Future
@@ -60,8 +61,8 @@ case class Main(id: String) extends SimpleSwingApplication:
 
           var world = AkkaWorld(width, height)
             .updatePlayer(Player(id, width / 2.0, height / 2.0, 120.0))
-            .addFoods(100)
 
+          ClusterSingleton(context.system).init(SingletonActor(FoodManager(width,height), "FoodManager"))
           entitiesReplicator.askUpdate(
             askReplyTo => Update(EntitiesKey, LWWMap.empty[String, Entity], WriteLocal, askReplyTo)
               ((world.players ++ world.foods).foldLeft(_)((map, entity) => map.put(node, entity.id, entity))),
@@ -69,7 +70,7 @@ case class Main(id: String) extends SimpleSwingApplication:
           )
           val manager = new MockGameStateManager(world)
           // Open both views at startup
-          // new GlobalView(manager).open()
+          //new GlobalView(manager).open()
           new LocalView(manager, id).open()
           Behaviors.withTimers(timers =>
             timers.startTimerAtFixedRate(Tick(), 30.millis)
