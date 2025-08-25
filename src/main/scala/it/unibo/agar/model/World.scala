@@ -1,6 +1,7 @@
 package it.unibo.agar.model
 
 trait World:
+
   val width: Int
   val height: Int
   def players: Seq[Player]
@@ -11,4 +12,3 @@ trait World:
 
   def playerById(id: String): Option[Player] =
     players.find(_.id == id)
-

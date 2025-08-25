@@ -1,10 +1,14 @@
 package it.unibo.agar.model
 
-import java.util.UUID
 import scala.util.Random.nextInt
 
-case class AkkaWorld(width: Int, height: Int, _players: Map[String, Player] = Map.empty, _foods: Map[String, Food] = Map.empty,
-                     removedEntitiesIds: Seq[String] = Seq.empty) extends World:
+case class AkkaWorld(
+    width: Int,
+    height: Int,
+    _players: Map[String, Player] = Map.empty,
+    _foods: Map[String, Food] = Map.empty,
+    removedEntitiesIds: Seq[String] = Seq.empty
+) extends World:
 
   def updatePlayer(player: Player): AkkaWorld =
     copy(_players = _players.updated(player.id, player))

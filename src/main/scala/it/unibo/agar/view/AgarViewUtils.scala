@@ -1,6 +1,7 @@
 package it.unibo.agar.view
 
-import it.unibo.agar.model.{LocalWorld, World}
+import it.unibo.agar.model.LocalWorld
+import it.unibo.agar.model.World
 
 import java.awt.Color
 import java.awt.Graphics2D
@@ -17,15 +18,15 @@ object AgarViewUtils:
 
   private def playerColor(id: String): Color = id match
     case pid if pid.startsWith("p") =>
-      val idx = pid.substring(2,4).toInt
+      val idx = pid.substring(2, 4).toInt
       playerPalette(idx % playerPalette.length)
     case _ => Color.gray
 
   def drawWorld(
-                 g: Graphics2D,
-                 world: World,
-                 offsetX: Double = 0,
-                 offsetY: Double = 0
+      g: Graphics2D,
+      world: World,
+      offsetX: Double = 0,
+      offsetY: Double = 0
   ): Unit =
     def toScreenCenter(x: Double, y: Double, radius: Int): (Int, Int) =
       ((x - offsetX - radius).toInt, (y - offsetY - radius).toInt)
