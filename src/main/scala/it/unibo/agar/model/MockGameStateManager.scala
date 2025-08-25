@@ -7,7 +7,7 @@ trait GameStateManager:
 
 class MockGameStateManager(
                             var world: AkkaWorld,
-                            val speed: Double = 10.0
+                            val speed: Double = 100.0
 ) extends GameStateManager:
 
   private var directions: Map[String, (Double, Double)] = Map.empty
@@ -29,8 +29,8 @@ class MockGameStateManager(
   // Player not found, ignore movement
 
   private def updatePlayerPosition(player: Player, dx: Double, dy: Double): Player =
-    val newX = (player.x + dx * speed).max(0).min(world.width)
-    val newY = (player.y + dy * speed).max(0).min(world.height)
+    val newX = (player.x + dx * speed * math.pow(player.mass,-0.439)).max(0).min(world.width)
+    val newY = (player.y + dy * speed * math.pow(player.mass,-0.439)).max(0).min(world.height)
     player.copy(x = newX, y = newY)
 
   private def updateWorldAfterMovement(player: Player): AkkaWorld =

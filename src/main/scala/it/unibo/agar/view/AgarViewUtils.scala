@@ -13,11 +13,11 @@ object AgarViewUtils:
   private val playerInnerOffset = 2
   private val playerInnerBorder = 4
   private val playerPalette: Array[Color] =
-    Array(Color.blue, Color.orange, Color.cyan, Color.pink, Color.yellow, Color.red, Color.green, Color.lightGray)
+    Array(Color.blue, Color.orange, Color.cyan, Color.pink, Color.yellow, Color.red, Color.green)
 
   private def playerColor(id: String): Color = id match
     case pid if pid.startsWith("p") =>
-      val idx = pid.drop(1).toIntOption.getOrElse(0)
+      val idx = pid.substring(2,4).toInt
       playerPalette(idx % playerPalette.length)
     case _ => Color.gray
 
@@ -48,9 +48,9 @@ object AgarViewUtils:
       val (borderX, borderY) = toScreenCenter(player.x, player.y, radius)
       g.setColor(playerBorderColor)
       g.drawOval(borderX, borderY, diameter, diameter)
-      g.setColor(playerColor(player.id))
+      g.setColor(playerColor("p" + player.id))
       val (innerX, innerY) = toScreenCenter(player.x, player.y, radius - playerInnerOffset)
       g.fillOval(innerX, innerY, diameter - playerInnerBorder, diameter - playerInnerBorder)
       g.setColor(playerBorderColor)
       val (labelX, labelY) = toScreenLabel(player.x, player.y)
-      g.drawString(player.id, labelX, labelY)
+      g.drawString(player.id.drop(3), labelX, labelY)

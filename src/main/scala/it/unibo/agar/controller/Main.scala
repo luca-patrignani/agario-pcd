@@ -8,22 +8,23 @@ import akka.cluster.ddata.typed.scaladsl.{DistributedData, Replicator}
 import akka.cluster.ddata.*
 import akka.cluster.typed.{ClusterSingleton, SingletonActor}
 import com.typesafe.config.ConfigFactory
+import it.unibo.agar.model
 import it.unibo.agar.model.*
-import it.unibo.agar.view.{GlobalView, LocalView}
+import it.unibo.agar.view.{GlobalView, LocalView, View}
 
 import java.awt.Window
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.swing.*
 import scala.swing.Swing.onEDT
+import scala.util.Random
 
-case class Main(id: String) extends SimpleSwingApplication:
+case class Main(name: String, port: Int, ai: Boolean=false) extends SimpleSwingApplication:
 
-  private val width = 1000
-  private val height = 1000
+  private val width = 700
+  private val height = 700
   private val numFoods = 100
-  private val players = GameInitializer.initialPlayers(2, width, height)
-  private val foods = GameInitializer.initialFoods(numFoods, width, height)
+  private val id = "p"+Random.between(10,100)+name
 
   trait Command
   case class Tick() extends Command
@@ -70,18 +71,23 @@ case class Main(id: String) extends SimpleSwingApplication:
           )
           val manager = new MockGameStateManager(world)
           // Open both views at startup
-          //new GlobalView(manager).open()
-          new LocalView(manager, id).open()
+          val baseView: Seq[View] = Seq(
+            new GlobalView(manager)
+          )
+          val views = baseView ++ (if !ai then Seq(new LocalView(manager,id)) else Seq())
+          views.foreach(v => v.open())
+
           Behaviors.withTimers(timers =>
             timers.startTimerAtFixedRate(Tick(), 30.millis)
             Behaviors.receiveMessage {
               case Tick() =>
                 manager.tick(world)
+                if ai then AIMovement.moveAI(id,manager)
                 updateRemoteWorld(manager.getWorld)
                 world = manager.getWorld
                 Behaviors.same
               case Show() =>
-                onEDT(Window.getWindows.foreach(_.repaint()))
+                views.foreach(v => v.render())
                 Behaviors.same
               case EntitiesRemoved(change @ Replicator.Changed(key)) => key match
                 case key if key == RemovedKey =>
@@ -106,21 +112,25 @@ case class Main(id: String) extends SimpleSwingApplication:
       }
     )
 
-  def startPlayer(port: String): ActorSystem[Command] =
+  def startPlayer(port: Int): ActorSystem[Command] =
     val config = ConfigFactory
       .parseString(s"""akka.remote.artery.canonical.port=$port""")
       .withFallback(ConfigFactory.load("agario"))
     ActorSystem(behaviour(), "AgarSystem", config)
 
   override def top: Frame = {
-    startPlayer(id)
+    startPlayer(port)
     new Frame { visible = false }
   }
 
 @main
 def firstPlayer() =
-  Main("2551").top
+  Main("Freogrella",2551).top
 
 @main
 def secondPlayer() =
-  Main("2552").top
+  Main("LucaPat",2552).top
+
+@main
+def AiPlayer() =
+  Main("ChatGeppetto",2553,true).top
